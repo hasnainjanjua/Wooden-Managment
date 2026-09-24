@@ -169,10 +169,12 @@ export const CustomerKhata: React.FC = () => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        const phone = cust.phone;
+                        if (!phone) return;
                         const text = encodeURIComponent(
                           `*${shopSettings.shop_name}* - Khata Reminder:\nMohtaram ${cust.name}, aap ka baqaya wajibul ada hisab Rs. ${bal.toLocaleString()} hai. Baraye meherbani adaigi farmaein. Shukriya!`
                         );
-                        window.open(`https://wa.me/${cust.phone.replace(/[^0-9]/g, '')}?text=${text}`, '_blank');
+                        window.open(`https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${text}`, '_blank');
                       }}
                       className="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer"
                       title="Send WhatsApp Reminder"

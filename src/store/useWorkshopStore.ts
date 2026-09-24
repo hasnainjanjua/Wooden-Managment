@@ -1234,7 +1234,7 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
   exportDatabaseFile: () => {
     try {
       const data = dbService.exportDatabase();
-      const blob = new Blob([data], { type: 'application/x-sqlite3' });
+      const blob = new Blob([data as unknown as BlobPart], { type: 'application/x-sqlite3' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
