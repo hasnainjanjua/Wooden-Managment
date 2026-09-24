@@ -20,6 +20,8 @@ import {
   Smartphone,
   Database,
   ExternalLink,
+  Cloud,
+  AlertTriangle,
 } from 'lucide-react';
 import { useWorkshopStore } from '../../store/useWorkshopStore';
 import { formatPKR, formatDate } from '../../utils/currency';
