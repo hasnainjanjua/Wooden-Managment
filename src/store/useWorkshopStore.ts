@@ -536,6 +536,9 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
         isLocked: false,
       });
 
+      // Pull latest cloud data immediately upon login
+      supabaseSyncService.syncOnStartup();
+
       get().showToast(`Khushamdeed, ${verified.full_name}!`, 'success');
       return { success: true };
     } catch (err: any) {

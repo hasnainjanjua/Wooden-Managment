@@ -4,15 +4,21 @@ export const SUPABASE_URL =
   (import.meta.env.VITE_SUPABASE_URL as string) ||
   'https://anqzmsmknttmfqkgzihz.supabase.co';
 
+export const DEFAULT_SUPABASE_ANON_KEY =
+  'sb_publishable_M8QZ3ys7CzZUFTeDIPXYTA_hCNQk2Xg';
+
 export const getSupabaseAnonKey = (): string => {
   if (typeof window !== 'undefined') {
     return (
       (import.meta.env.VITE_SUPABASE_ANON_KEY as string) ||
       localStorage.getItem('workshop_supabase_anon_key') ||
-      ''
+      DEFAULT_SUPABASE_ANON_KEY
     );
   }
-  return (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || '';
+  return (
+    (import.meta.env.VITE_SUPABASE_ANON_KEY as string) ||
+    DEFAULT_SUPABASE_ANON_KEY
+  );
 };
 
 export const setSupabaseAnonKey = (key: string): void => {
@@ -25,7 +31,7 @@ export const setSupabaseAnonKey = (key: string): void => {
 
 let _supabaseInstance: SupabaseClient = createClient(
   SUPABASE_URL,
-  getSupabaseAnonKey() || 'placeholder-anon-key'
+  getSupabaseAnonKey()
 );
 
 export const getSupabase = (): SupabaseClient => {

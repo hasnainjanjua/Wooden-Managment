@@ -153,6 +153,7 @@ export const supabaseSyncService = {
     const counts: { [table: string]: number } = {};
 
     try {
+      await dbService.init();
       // 0. Shop Settings
       const { data: remoteSettings } = await client
         .from('shop_settings')
@@ -381,6 +382,58 @@ export const supabaseSyncService = {
         counts['quotations'] = remoteQuotes.length;
       }
 
+      // 12. Supplier Ledger
+      const { data: remoteSuppLedger } = await client.from('supplier_ledger').select('*');
+      if (remoteSuppLedger && remoteSuppLedger.length > 0) {
+        for (const sl of remoteSuppLedger) {
+          dbService.run(
+            `INSERT OR REPLACE INTO supplier_ledger (id, supplier_id, entry_date, ref_type, description, bill_no, debit, credit, is_void, void_reason, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [sl.id, sl.supplier_id, sl.entry_date, sl.ref_type, sl.description, sl.bill_no, sl.debit, sl.credit, sl.is_void, sl.void_reason, sl.created_at]
+          );
+        }
+        counts['supplier_ledger'] = remoteSuppLedger.length;
+      }
+
+      // 13. Karigar Attendance
+      const { data: remoteAttendance } = await client.from('karigar_attendance').select('*');
+      if (remoteAttendance && remoteAttendance.length > 0) {
+        for (const a of remoteAttendance) {
+          dbService.run(
+            `INSERT OR REPLACE INTO karigar_attendance (id, karigar_id, att_date, status, notes)
+             VALUES (?, ?, ?, ?, ?)`,
+            [a.id, a.karigar_id, a.att_date, a.status, a.notes]
+          );
+        }
+        counts['karigar_attendance'] = remoteAttendance.length;
+      }
+
+      // 14. Karigar Payments
+      const { data: remotePayments } = await client.from('karigar_payments').select('*');
+      if (remotePayments && remotePayments.length > 0) {
+        for (const p of remotePayments) {
+          dbService.run(
+            `INSERT OR REPLACE INTO karigar_payments (id, karigar_id, pay_date, pay_type, amount, notes, is_void, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [p.id, p.karigar_id, p.pay_date, p.pay_type, p.amount, p.notes, p.is_void, p.created_at]
+          );
+        }
+        counts['karigar_payments'] = remotePayments.length;
+      }
+
+      // 15. Quotation Items
+      const { data: remoteQuoteItems } = await client.from('quotation_items').select('*');
+      if (remoteQuoteItems && remoteQuoteItems.length > 0) {
+        for (const qi of remoteQuoteItems) {
+          dbService.run(
+            `INSERT OR REPLACE INTO quotation_items (id, quotation_id, item_id, item_name, quantity, rate, line_total, notes)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [qi.id, qi.quotation_id, qi.item_id, qi.item_name, qi.quantity, qi.rate, qi.line_total, qi.notes]
+          );
+        }
+        counts['quotation_items'] = remoteQuoteItems.length;
+      }
+
       // Refresh Workshop Store UI after pulling
       if (typeof window !== 'undefined' && (window as any).__workshopStore) {
         (window as any).__workshopStore.getState().refreshAll();
@@ -415,6 +468,7 @@ export const supabaseSyncService = {
     const counts: { [table: string]: number } = {};
 
     try {
+      await dbService.init();
       // 0. Shop Settings
       try {
         const settings = settingsRepo.get();
@@ -598,6 +652,122 @@ export const supabaseSyncService = {
         );
         if (error) throw new Error(`Quotations sync error: ${error.message}`);
         counts['quotations'] = quotes.length;
+      }
+
+      // 9. Sales Invoice Items
+      const invoiceItems = dbService.query<any>('SELECT * FROM sales_invoice_items');
+      if (invoiceItems && invoiceItems.length > 0) {
+        const { error } = await client.from('sales_invoice_items').upsert(
+          invoiceItems.map((it) => ({
+            id: it.id,
+            invoice_id: it.invoice_id,
+            item_id: it.item_id || null,
+            item_name: it.item_name,
+            quantity: it.quantity,
+            rate: it.rate,
+            line_total: it.line_total,
+          }))
+        );
+        if (error) throw new Error(`Invoice items sync error: ${error.message}`);
+        counts['sales_invoice_items'] = invoiceItems.length;
+      }
+
+      // 10. Customer Ledger
+      const customerLedger = dbService.query<any>('SELECT * FROM customer_ledger');
+      if (customerLedger && customerLedger.length > 0) {
+        const { error } = await client.from('customer_ledger').upsert(
+          customerLedger.map((l) => ({
+            id: l.id,
+            customer_id: l.customer_id,
+            entry_date: l.entry_date,
+            ref_type: l.ref_type,
+            ref_id: l.ref_id || null,
+            description: l.description,
+            debit: l.debit || 0,
+            credit: l.credit || 0,
+            is_void: l.is_void || 0,
+            void_reason: l.void_reason || null,
+            created_at: l.created_at || new Date().toISOString(),
+          }))
+        );
+        if (error) throw new Error(`Customer ledger sync error: ${error.message}`);
+        counts['customer_ledger'] = customerLedger.length;
+      }
+
+      // 11. Supplier Ledger
+      const supplierLedger = dbService.query<any>('SELECT * FROM supplier_ledger');
+      if (supplierLedger && supplierLedger.length > 0) {
+        const { error } = await client.from('supplier_ledger').upsert(
+          supplierLedger.map((sl) => ({
+            id: sl.id,
+            supplier_id: sl.supplier_id,
+            entry_date: sl.entry_date,
+            ref_type: sl.ref_type,
+            description: sl.description,
+            bill_no: sl.bill_no || null,
+            debit: sl.debit || 0,
+            credit: sl.credit || 0,
+            is_void: sl.is_void || 0,
+            void_reason: sl.void_reason || null,
+            created_at: sl.created_at || new Date().toISOString(),
+          }))
+        );
+        if (error) throw new Error(`Supplier ledger sync error: ${error.message}`);
+        counts['supplier_ledger'] = supplierLedger.length;
+      }
+
+      // 12. Karigar Attendance
+      const attendance = dbService.query<any>('SELECT * FROM karigar_attendance');
+      if (attendance && attendance.length > 0) {
+        const { error } = await client.from('karigar_attendance').upsert(
+          attendance.map((a) => ({
+            id: a.id,
+            karigar_id: a.karigar_id,
+            att_date: a.att_date,
+            status: a.status,
+            notes: a.notes || null,
+          }))
+        );
+        if (error) throw new Error(`Karigar attendance sync error: ${error.message}`);
+        counts['karigar_attendance'] = attendance.length;
+      }
+
+      // 13. Karigar Payments
+      const payments = dbService.query<any>('SELECT * FROM karigar_payments');
+      if (payments && payments.length > 0) {
+        const { error } = await client.from('karigar_payments').upsert(
+          payments.map((p) => ({
+            id: p.id,
+            karigar_id: p.karigar_id,
+            pay_date: p.pay_date,
+            pay_type: p.pay_type,
+            amount: p.amount,
+            notes: p.notes || null,
+            is_void: p.is_void || 0,
+            created_at: p.created_at || new Date().toISOString(),
+          }))
+        );
+        if (error) throw new Error(`Karigar payments sync error: ${error.message}`);
+        counts['karigar_payments'] = payments.length;
+      }
+
+      // 14. Quotation Items
+      const quoteItems = dbService.query<any>('SELECT * FROM quotation_items');
+      if (quoteItems && quoteItems.length > 0) {
+        const { error } = await client.from('quotation_items').upsert(
+          quoteItems.map((qi) => ({
+            id: qi.id,
+            quotation_id: qi.quotation_id,
+            item_id: qi.item_id || null,
+            item_name: qi.item_name,
+            quantity: qi.quantity,
+            rate: qi.rate,
+            line_total: qi.line_total,
+            notes: qi.notes || null,
+          }))
+        );
+        if (error) throw new Error(`Quotation items sync error: ${error.message}`);
+        counts['quotation_items'] = quoteItems.length;
       }
 
       return {
