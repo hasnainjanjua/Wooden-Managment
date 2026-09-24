@@ -40,6 +40,7 @@ export const PosBilling: React.FC = () => {
   const cashReceived = useWorkshopStore((state) => state.cashReceived);
   const invoiceDate = useWorkshopStore((state) => state.invoiceDate);
   const invoiceNotes = useWorkshopStore((state) => state.invoiceNotes);
+  const setActiveTab = useWorkshopStore((state) => state.setActiveTab);
 
   const addToCart = useWorkshopStore((state) => state.addToCart);
   const updateCartItem = useWorkshopStore((state) => state.updateCartItem);

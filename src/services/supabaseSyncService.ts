@@ -138,7 +138,7 @@ export const supabaseSyncService = {
             id: 1,
             shop_name: settings.shop_name,
             shop_name_urdu: settings.urdu_title,
-            owner_name: settings.owner_name || 'Muhammad Ahmad',
+            owner_name: (settings as any).owner_name || 'Muhammad Ahmad',
             phone1: settings.phone1,
             phone2: settings.phone2 || '',
             address: settings.address,

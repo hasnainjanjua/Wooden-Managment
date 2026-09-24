@@ -150,7 +150,7 @@ export const SalesInvoiceHistory: React.FC = () => {
       description: inv.notes || 'Sale Invoice',
       is_void: inv.is_void || 0,
       void_reason: inv.void_reason,
-      voided_at: inv.voided_at,
+      created_at: inv.created_at || inv.invoice_date,
     };
 
     setSelectedCustomer(cust);
