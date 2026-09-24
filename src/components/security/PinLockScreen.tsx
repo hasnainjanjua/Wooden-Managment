@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, Unlock, KeyRound, ShieldCheck, AlertCircle, Delete, X } from 'lucide-react';
+import { Lock, AlertCircle, Delete } from 'lucide-react';
 import { useWorkshopStore } from '../../store/useWorkshopStore';
 
 export const PinLockScreen: React.FC = () => {
-  const shopSettings = useWorkshopStore((state) => state.shopSettings);
   const unlockApp = useWorkshopStore((state) => state.unlockApp);
 
   const [pin, setPin] = useState('');
@@ -63,8 +62,6 @@ export const PinLockScreen: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [pin]);
-
-  const isDefaultPin = (shopSettings.app_pin || '1234') === '1234';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4 select-none">
@@ -158,15 +155,6 @@ export const PinLockScreen: React.FC = () => {
           </button>
         </div>
 
-        {/* First Time / Default Notice */}
-        {isDefaultPin && (
-          <div className="mt-6 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-center text-[11px] text-amber-900">
-            <span className="font-bold">Default PIN: 1234</span>
-            <span className="block text-[10px] text-slate-600 mt-0.5">
-              (Aap Settings mein naya PIN set kar sakty hain)
-            </span>
-          </div>
-        )}
       </div>
     </div>
   );

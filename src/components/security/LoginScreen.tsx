@@ -4,10 +4,7 @@ import {
   User,
   Eye,
   EyeOff,
-  ShieldCheck,
   LogIn,
-  CheckCircle2,
-  Sparkles,
 } from 'lucide-react';
 import { useWorkshopStore } from '../../store/useWorkshopStore';
 
@@ -41,15 +38,6 @@ export const LoginScreen: React.FC = () => {
     }, 200);
   };
 
-  const handleQuickFill = (u: string, p: string) => {
-    setUsername(u);
-    setPassword(p);
-    setErrorMessage('');
-    const res = login(u, p, rememberMe);
-    if (!res.success) {
-      setErrorMessage(res.error || 'Login failed');
-    }
-  };
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-slate-900 p-4 relative overflow-hidden select-none">
@@ -101,7 +89,7 @@ export const LoginScreen: React.FC = () => {
                   setUsername(e.target.value);
                   setErrorMessage('');
                 }}
-                placeholder="e.g. admin or admin2"
+                placeholder="Apna username enter karein..."
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-3 py-2.5 text-xs text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm transition"
               />
             </div>
@@ -121,13 +109,13 @@ export const LoginScreen: React.FC = () => {
                   setPassword(e.target.value);
                   setErrorMessage('');
                 }}
-                placeholder="Enter your password..."
+                placeholder="Apna password enter karein..."
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-10 py-2.5 text-xs text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm transition"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="p-1 text-slate-400 hover:text-slate-600 absolute right-3 top-2.5"
+                className="p-1 text-slate-400 hover:text-slate-600 absolute right-3 top-2.5 cursor-pointer"
                 title={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -160,33 +148,10 @@ export const LoginScreen: React.FC = () => {
           </button>
         </form>
 
-        {/* 1-Click Fast Login Chips */}
-        <div className="pt-2 border-t border-slate-100 space-y-2.5">
-          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider text-center">
-            Admin Quick Login (فوری ایڈمن لاگ ان)
-          </span>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickFill('admin', 'admin')}
-              className="p-2.5 bg-slate-50 hover:bg-amber-50 text-slate-800 hover:text-amber-900 border border-slate-200 hover:border-amber-300 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
-            >
-              <span>👑 Admin 1 (admin)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFill('admin2', 'admin123')}
-              className="p-2.5 bg-slate-50 hover:bg-amber-50 text-slate-800 hover:text-amber-900 border border-slate-200 hover:border-amber-300 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
-            >
-              <span>👑 Admin 2 (admin2)</span>
-            </button>
-          </div>
-        </div>
-
         {/* Security / Persistence Assurance Footer */}
         <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 text-center">
           <p className="text-[11px] text-slate-500 leading-relaxed">
-            🔒 <strong>Web Session:</strong> Login hone ke baad aap ka session is browser mein hamesha save rahay ga. Page refresh karne se data ya session khatam nahi hoga.
+            🔒 <strong>Secure Management Portal:</strong> Al Madinah CNC & Wood Works ERP. Authorized personnel only.
           </p>
         </div>
       </div>

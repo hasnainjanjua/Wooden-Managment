@@ -13,17 +13,13 @@ import {
   KeyRound,
   Shield,
   Settings,
-  Cloud,
   RefreshCw,
   Download,
   Upload,
   Laptop,
   Smartphone,
-  AlertTriangle,
-  Globe,
   Database,
   ExternalLink,
-  Copy,
 } from 'lucide-react';
 import { useWorkshopStore } from '../../store/useWorkshopStore';
 import { formatPKR, formatDate } from '../../utils/currency';
@@ -48,17 +44,9 @@ export const SettingsBackup: React.FC = () => {
   const changeUserPassword = useWorkshopStore((state) => state.changeUserPassword);
   const logout = useWorkshopStore((state) => state.logout);
 
-  // Cloud Sync & Multi-Device
-  const cloudSyncStatus = useWorkshopStore((state) => state.cloudSyncStatus);
-  const syncWithCloud = useWorkshopStore((state) => state.syncWithCloud);
-  const saveCloudConfig = useWorkshopStore((state) => state.saveCloudConfig);
+  // Portable Backup & Restore
   const exportDatabaseFile = useWorkshopStore((state) => state.exportDatabaseFile);
   const importDatabaseFile = useWorkshopStore((state) => state.importDatabaseFile);
-
-  const [cloudEndpoint, setCloudEndpoint] = useState(cloudSyncStatus?.cloudEndpoint || '');
-  const [isCloudEnabled, setIsCloudEnabled] = useState(cloudSyncStatus?.isEnabled ?? false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [cloudNotice, setCloudNotice] = useState('');
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Supabase State
@@ -152,23 +140,6 @@ export const SettingsBackup: React.FC = () => {
     updateShopSettings(formData);
     setIsSavedNotice(true);
     setTimeout(() => setIsSavedNotice(false), 3000);
-  };
-
-  const handleSaveCloudConfig = (e: React.FormEvent) => {
-    e.preventDefault();
-    saveCloudConfig(cloudEndpoint, isCloudEnabled);
-    setCloudNotice('Cloud sync settings mehfooz ho gayin!');
-    setTimeout(() => setCloudNotice(''), 3500);
-  };
-
-  const handleSyncNow = async () => {
-    if (!cloudEndpoint.trim()) {
-      showToast('Pehle Cloud Webhook / API URL darj karein!', 'error');
-      return;
-    }
-    setIsSyncing(true);
-    await syncWithCloud();
-    setIsSyncing(false);
   };
 
   const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -563,7 +534,7 @@ export const SettingsBackup: React.FC = () => {
                 required
                 value={oldPin}
                 onChange={(e) => setOldPin(e.target.value)}
-                placeholder="Default: 1234"
+                placeholder="Current PIN"
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono text-center tracking-widest text-sm shadow-sm"
               />
             </div>
@@ -612,167 +583,65 @@ export const SettingsBackup: React.FC = () => {
       </div>
 
       {/* ========================================================================= */}
-      {/* 4. MULTI-DEVICE ACCESS & CLOUD SYNC                                       */}
+      {/* 4. PORTABLE DATABASE BACKUP & RESTORE (.sqlite)                           */}
       {/* ========================================================================= */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-3 gap-3">
           <div className="flex items-center gap-2.5 text-amber-700 font-extrabold text-sm">
-            <Cloud className="w-5 h-5 text-amber-600" />
-            <span>Multi-Device Access & Cloud Sync (ملٹی ڈیوائس ڈیٹا اور کلاؤڈ سنک)</span>
+            <Download className="w-5 h-5 text-amber-600" />
+            <span>Portable Database Backup & Restore (ڈیٹا فائل بیک اپ و ریسٹور)</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-mono font-bold bg-slate-100 text-slate-700 px-3 py-1 rounded-lg border border-slate-200">
-              Device ID: <strong className="text-amber-700">{cloudSyncStatus.deviceId}</strong>
+              Format: <strong className="text-amber-700">.sqlite / .db</strong>
             </span>
-            {cloudNotice && (
-              <span className="text-emerald-700 text-xs font-bold flex items-center gap-1">
-                <Check className="w-4 h-4" />
-                <span>{cloudNotice}</span>
-              </span>
-            )}
           </div>
         </div>
 
         <p className="text-xs text-slate-600 leading-relaxed">
-          Agar aap dukan ke computer ke ilawa apne <strong>Mobile Phone</strong> ya <strong>Ghar ke Laptop</strong> par bhi hisab kitab dekhna ya chalana chahein, toh yeh 2 sahooliyat istemal karein:
+          Aap kisi bhi waqt offline backup ke liye mukammal database file download kar sakty hain ya purani backup file restore kar sakty hain:
         </p>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Option A: Portable SQLite Snapshot File */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between space-y-4">
-            <div>
-              <div className="flex items-center gap-2 text-xs font-extrabold text-slate-900 mb-1">
-                <Download className="w-4 h-4 text-amber-600" />
-                <span>1. Portable Data File (موبائل / لیپ ٹاپ پر فائل ٹرانسفر)</span>
-              </div>
-              <p className="text-[11px] text-slate-500 leading-normal">
-                Dukan ke computer se mukammal database file download karein aur WhatsApp ya USB ke zariye apne mobile ya doosre computer par le ja kar Restore karein.
-              </p>
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between space-y-4">
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={exportDatabaseFile}
+                className="flex-1 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs shadow-sm transition flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                <span>Export Data File (.sqlite)</span>
+              </button>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileImport}
+                accept=".sqlite,.db"
+                className="hidden"
+              />
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex-1 px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+              >
+                <Upload className="w-4 h-4 text-slate-600" />
+                <span>Import Data File (.sqlite)</span>
+              </button>
             </div>
 
-            <div className="space-y-2 pt-2">
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={exportDatabaseFile}
-                  className="flex-1 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs shadow-sm transition flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Export Data File (.sqlite)</span>
-                </button>
-
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileImport}
-                  accept=".sqlite,.db"
-                  className="hidden"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex-1 px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
-                >
-                  <Upload className="w-4 h-4 text-slate-600" />
-                  <span>Import Data File</span>
-                </button>
-              </div>
-
-              <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 font-medium pt-1">
-                <Laptop className="w-3.5 h-3.5 text-slate-400" />
-                <span>Shop PC</span>
-                <span>⇄</span>
-                <Smartphone className="w-3.5 h-3.5 text-slate-400" />
-                <span>Mobile Phone</span>
-                <span>⇄</span>
-                <Laptop className="w-3.5 h-3.5 text-slate-400" />
-                <span>Home Laptop</span>
-              </div>
+            <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 font-medium pt-1">
+              <Laptop className="w-3.5 h-3.5 text-slate-400" />
+              <span>Shop PC</span>
+              <span>⇄</span>
+              <Smartphone className="w-3.5 h-3.5 text-slate-400" />
+              <span>Mobile Phone</span>
+              <span>⇄</span>
+              <Laptop className="w-3.5 h-3.5 text-slate-400" />
+              <span>Home Laptop</span>
             </div>
-          </div>
-
-          {/* Option B: Online Webhook / Cloud Sync */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2 text-xs font-extrabold text-slate-900">
-                  <Globe className="w-4 h-4 text-emerald-600" />
-                  <span>2. Remote Cloud Sync (آن لائن کلاؤڈ سرور سنک)</span>
-                </div>
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                    cloudSyncStatus.status === 'SUCCESS'
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : cloudSyncStatus.status === 'ERROR'
-                      ? 'bg-rose-100 text-rose-700'
-                      : cloudSyncStatus.status === 'SYNCING'
-                      ? 'bg-amber-100 text-amber-700'
-                      : 'bg-slate-200 text-slate-600'
-                  }`}
-                >
-                  {cloudSyncStatus.status}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 leading-normal">
-                Agar aap ke paas koi remote cloud webhook (e.g. Supabase, N8N, custom API) mojood hai toh uska URL enter karein.
-              </p>
-            </div>
-
-            <form onSubmit={handleSaveCloudConfig} className="space-y-3 pt-1">
-              <div>
-                <input
-                  type="url"
-                  value={cloudEndpoint}
-                  onChange={(e) => setCloudEndpoint(e.target.value)}
-                  placeholder="https://your-cloud-api.com/api/sync"
-                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm font-mono text-[11px]"
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700 font-semibold">
-                  <input
-                    type="checkbox"
-                    checked={isCloudEnabled}
-                    onChange={(e) => setIsCloudEnabled(e.target.checked)}
-                    className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
-                  />
-                  <span>Enable Cloud Sync</span>
-                </label>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="submit"
-                    className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
-                  >
-                    Save Link
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleSyncNow}
-                    disabled={isSyncing}
-                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                    <span>{isSyncing ? 'Syncing...' : 'Sync Now'}</span>
-                  </button>
-                </div>
-              </div>
-
-              {cloudSyncStatus.lastSyncedAt && (
-                <div className="text-[10px] text-slate-500 font-mono">
-                  Aakhri martaba sync hua: {formatDate(cloudSyncStatus.lastSyncedAt)}
-                </div>
-              )}
-              {cloudSyncStatus.errorMessage && (
-                <div className="text-[10px] text-rose-600 font-semibold flex items-center gap-1">
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                  <span>{cloudSyncStatus.errorMessage}</span>
-                </div>
-              )}
-            </form>
           </div>
         </div>
       </div>
