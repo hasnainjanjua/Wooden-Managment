@@ -34,18 +34,28 @@
 
 @media print {
   @page {
-    margin: 3mm;
+    margin: 4mm;
     size: auto;
   }
 
-  body {
+  html, body {
     background-color: #ffffff !important;
     color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 100% !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    overflow: visible !important;
   }
 
-  .no-print {
+  /* Completely remove non-printable items from layout */
+  .no-print,
+  header,
+  nav,
+  button,
+  .toast-container {
     display: none !important;
   }
 
@@ -53,17 +63,42 @@
     display: block !important;
   }
 
-  /* Make sure background is white for printed elements */
+  /* Universal Print Isolation: Hide all page content by default */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Make only designated print containers and their children visible */
   #printable-area,
+  #printable-area *,
+  #cnc-printable-area,
+  #cnc-printable-area *,
+  #closing-report-area,
+  #closing-report-area *,
+  #ledger-printable-area,
+  #ledger-printable-area *,
+  #expense-voucher-printable,
+  #expense-voucher-printable *,
+  #karigar-history-printable,
+  #karigar-history-printable *,
+  #supplier-voucher-printable,
+  #supplier-voucher-printable *,
+  .printable-area,
+  .printable-area * {
+    visibility: visible !important;
+  }
+
+  /* Reset print containers for clean physical output */
+  #printable-area,
+  #cnc-printable-area,
   #closing-report-area,
   #ledger-printable-area,
-  #cnc-printable-area {
+  #expense-voucher-printable,
+  #karigar-history-printable,
+  #supplier-voucher-printable,
+  .printable-area {
     background: #ffffff !important;
     color: #000000 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
     box-shadow: none !important;
     border: none !important;
   }

@@ -23,8 +23,8 @@ export const PrintCncJobModal: React.FC<PrintCncJobModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-slate-100 border border-slate-200 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden my-auto animate-in fade-in zoom-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 overflow-y-auto print:static print:inset-auto print:p-0 print:m-0 print:bg-white print:overflow-visible print:block">
+      <div className="bg-slate-100 border border-slate-200 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden my-auto animate-in fade-in zoom-in duration-150 print:border-none print:shadow-none print:bg-white print:w-full print:max-w-none print:m-0 print:p-0 print:rounded-none">
         {/* Top Control Bar (Hidden during print) */}
         <div className="no-print bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-2 text-cyan-900 font-bold text-sm">
@@ -34,7 +34,7 @@ export const PrintCncJobModal: React.FC<PrintCncJobModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
-              className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition"
+              className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition active:scale-95"
             >
               <Printer className="w-4 h-4" />
               <span>Print (80mm)</span>
@@ -50,7 +50,7 @@ export const PrintCncJobModal: React.FC<PrintCncJobModalProps> = ({
 
         {/* The Printable Slip (80mm Thermal Slip format) */}
         <div
-          className="p-6 bg-white text-black font-mono text-sm max-w-sm mx-auto my-4 shadow-lg rounded-sm"
+          className="p-6 bg-white text-black font-mono text-xs max-w-[80mm] w-full mx-auto my-4 shadow-lg rounded-sm print:border-none print:shadow-none print:my-0 print:mx-auto print:p-3"
           id="cnc-printable-area"
         >
           {/* Header */}
@@ -152,7 +152,7 @@ export const PrintCncJobModal: React.FC<PrintCncJobModalProps> = ({
             <p className="font-bold font-urdu text-[11px] mt-2">
               نوٹ: مال وصول کرتے وقت یہ پرچی دکھانا لازمی ہے۔
             </p>
-            <p className="text-[9px] text-gray-500">Al Madinah CNC System</p>
+            <p className="text-[9px] text-gray-500">{settings.shop_name}</p>
           </div>
         </div>
 

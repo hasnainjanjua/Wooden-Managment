@@ -77,8 +77,8 @@ export const KarigarHistoryModal: React.FC<KarigarHistoryModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-150">
-      <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-150 print:static print:inset-auto print:p-0 print:m-0 print:bg-white print:overflow-visible print:block">
+      <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col print:border-none print:shadow-none print:w-full print:max-w-none print:m-0 print:p-0 print:max-h-none">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -127,7 +127,7 @@ export const KarigarHistoryModal: React.FC<KarigarHistoryModalProps> = ({
         </div>
 
         {/* Tabs Bar */}
-        <div className="px-6 pt-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3">
+        <div className="no-print px-6 pt-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3">
           <button
             type="button"
             onClick={() => setActiveTab('attendance')}
@@ -255,7 +255,7 @@ export const KarigarHistoryModal: React.FC<KarigarHistoryModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
+        <div className="no-print p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={onClose}

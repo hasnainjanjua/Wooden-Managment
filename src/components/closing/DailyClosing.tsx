@@ -318,8 +318,8 @@ export const DailyClosing: React.FC = () => {
       <div id="closing-report-area">
         {/* Printable Header */}
         <div className="print-only mb-6 border-b-2 border-black pb-3 text-black">
-          <h1 className="text-xl font-black">AL MADINAH CNC AND WOOD WORKS</h1>
-          <p className="text-xs font-urdu font-bold">المدینہ سی این سی اینڈ ووڈ ورکس - روزنامچہ و حساب رپورٹ</p>
+          <h1 className="text-xl font-black">{shopSettings.shop_name}</h1>
+          <p className="text-xs font-urdu font-bold">{shopSettings.urdu_title} - روزنامچہ و حساب رپورٹ</p>
           <p className="text-xs mt-1">
             <strong>Tareekh:</strong> {formatDate(startDate)}
             {isRange && <span> se {formatDate(endDate)}</span>}

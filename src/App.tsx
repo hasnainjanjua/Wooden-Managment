@@ -29,6 +29,7 @@ export const App: React.FC = () => {
   const init = useWorkshopStore((state) => state.init);
   const toast = useWorkshopStore((state) => state.toast);
   const clearToast = useWorkshopStore((state) => state.clearToast);
+  const printInvoiceData = useWorkshopStore((state) => state.printInvoiceData);
 
   useEffect(() => {
     init();
@@ -101,7 +102,7 @@ export const App: React.FC = () => {
     <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col font-sans select-none">
       <Header />
 
-      <main className="flex-1 overflow-hidden relative">
+      <main className={`flex-1 overflow-hidden relative ${printInvoiceData ? 'print:hidden' : ''}`}>
         {activeTab === 'pos' && <PosBilling />}
         {activeTab === 'quotations' && <QuotationManager />}
         {activeTab === 'cnc' && <CncRegister />}
