@@ -180,10 +180,10 @@ export const PosBilling: React.FC = () => {
   return (
     <div className="h-[calc(100vh-105px)] flex flex-col lg:flex-row overflow-hidden bg-slate-100">
       {/* ========================================================================= */}
-      {/* COLUMN 1: LEFT - Category & Quick-Tap Catalog Items Grid (Fixed on Desktop) */}
+      {/* COLUMN 1: LEFT - Category & Quick-Tap Catalog Items Grid (Fixed ~600px on Desktop) */}
       {/* ========================================================================= */}
       <div
-        className={`w-full lg:w-[320px] xl:w-[360px] lg:shrink-0 flex flex-col border-r border-slate-200 bg-white overflow-hidden ${
+        className={`w-full lg:w-[520px] xl:w-[600px] 2xl:w-[640px] lg:shrink-0 flex flex-col border-r border-slate-200 bg-white overflow-hidden ${
           mobileTab === 'ITEMS' ? 'flex' : 'hidden lg:flex'
         }`}
       >
@@ -233,7 +233,7 @@ export const PosBilling: React.FC = () => {
                 value={customItemRate}
                 onChange={(e) => setCustomItemRate(e.target.value)}
                 placeholder="Rate Rs."
-                className="w-20 bg-white border border-slate-300 rounded-xl px-2 py-1.5 text-xs text-amber-800 font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono shadow-xs"
+                className="w-24 bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs text-amber-800 font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono shadow-xs"
               />
               <button
                 type="submit"
@@ -288,7 +288,7 @@ export const PosBilling: React.FC = () => {
         </div>
 
         {/* Catalog Items Grid */}
-        <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 gap-2 content-start bg-slate-50/50">
+        <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2.5 content-start bg-slate-50/50">
           {filteredItems.map((item) => (
             <button
               key={item.id}
@@ -340,7 +340,7 @@ export const PosBilling: React.FC = () => {
           ))}
 
           {filteredItems.length === 0 && (
-            <div className="col-span-2 text-center py-8 text-slate-500 text-xs">
+            <div className="col-span-2 sm:col-span-2 md:col-span-3 lg:col-span-2 xl:col-span-3 text-center py-8 text-slate-500 text-xs">
               Koi item nahi mila. Uper direct item se shamil karein.
             </div>
           )}
