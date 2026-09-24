@@ -1268,3 +1268,7 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
     }
   },
 }));
+
+if (typeof window !== 'undefined') {
+  (window as any).__workshopStore = useWorkshopStore;
+}

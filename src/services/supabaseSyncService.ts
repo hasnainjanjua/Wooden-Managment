@@ -71,10 +71,32 @@ export const supabaseSyncService = {
     }
   },
 
+  async syncOnStartup(): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    try {
+      _syncStatus = 'SYNCING';
+      // 1. Pull latest cloud records down into local SQLite
+      await this.pullAllFromSupabase();
+      // 2. Push any local offline records back up
+      await this.pushAllToSupabaseQuietly();
+      _syncStatus = 'SYNCED';
+      _lastSyncTimestamp = new Date().toISOString();
+    } catch (e) {
+      console.warn('Startup cloud sync notice:', e);
+      _syncStatus = 'OFFLINE';
+    }
+  },
+
   initAutoSync() {
     if (typeof window !== 'undefined') {
+      // Run two-way sync on initial startup
+      setTimeout(() => {
+        this.syncOnStartup();
+      }, 1000);
+
+      // When coming back online
       window.addEventListener('online', () => {
-        this.triggerAutoSync(1000);
+        this.syncOnStartup();
       });
 
       // Background periodic check every 60 seconds
@@ -118,6 +140,269 @@ export const supabaseSyncService = {
     }
   },
 
+  /**
+   * PULL: Downloads all data from Supabase Cloud and upserts into local SQLite.
+   * Essential for mobile phones or any newly connected devices to populate immediately!
+   */
+  async pullAllFromSupabase(): Promise<SyncResult> {
+    if (!isSupabaseConfigured()) {
+      return { success: false, message: 'Supabase is not configured' };
+    }
+
+    const client = getSupabase();
+    const counts: { [table: string]: number } = {};
+
+    try {
+      // 0. Shop Settings
+      const { data: remoteSettings } = await client
+        .from('shop_settings')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+      if (remoteSettings) {
+        settingsRepo.update({
+          shop_name: remoteSettings.shop_name || 'AL MADINAH CNC AND WOOD WORKS',
+          urdu_title: remoteSettings.shop_name_urdu || 'المدینہ سی این سی اینڈ ووڈ ورکس',
+          tagline: 'High Quality Timber, Wooden Doors, Chowkat & 3D/2D CNC Designing',
+          phone1: remoteSettings.phone1 || '0300-1234567',
+          phone2: remoteSettings.phone2 || '',
+          address: remoteSettings.address || '',
+          receipt_footer: remoteSettings.receipt_footer_urdu || '',
+          pin_enabled: remoteSettings.pin_enabled ?? 1,
+          app_pin: remoteSettings.app_pin || '1234',
+        });
+        counts['shop_settings'] = 1;
+      }
+
+      // 1. Users
+      const { data: remoteUsers } = await client.from('users').select('*');
+      if (remoteUsers && remoteUsers.length > 0) {
+        for (const u of remoteUsers) {
+          dbService.run(
+            `INSERT OR REPLACE INTO users (id, username, password, full_name, role, is_active, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [u.id, u.username, u.password, u.full_name, u.role, u.is_active ?? 1, u.created_at]
+          );
+        }
+        counts['users'] = remoteUsers.length;
+      }
+
+      // 2. Customers
+      const { data: remoteCustomers } = await client.from('customers').select('*');
+      if (remoteCustomers && remoteCustomers.length > 0) {
+        for (const c of remoteCustomers) {
+          dbService.run(
+            `INSERT OR REPLACE INTO customers (id, name, phone, address, created_at)
+             VALUES (?, ?, ?, ?, ?)`,
+            [c.id, c.name, c.phone, c.address, c.created_at]
+          );
+        }
+        counts['customers'] = remoteCustomers.length;
+      }
+
+      // 3. Catalog Items
+      const { data: remoteCatalog } = await client.from('catalog_items').select('*');
+      if (remoteCatalog && remoteCatalog.length > 0) {
+        for (const item of remoteCatalog) {
+          dbService.run(
+            `INSERT OR REPLACE INTO catalog_items (id, category, name, default_rate, stock_qty, min_stock_alert, is_active, display_order)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              item.id,
+              item.category,
+              item.name,
+              item.default_rate,
+              item.stock_qty,
+              item.min_stock_alert,
+              item.is_active,
+              item.display_order,
+            ]
+          );
+        }
+        counts['catalog_items'] = remoteCatalog.length;
+      }
+
+      // 4. Sales Invoices
+      const { data: remoteInvoices } = await client.from('sales_invoices').select('*');
+      if (remoteInvoices && remoteInvoices.length > 0) {
+        for (const inv of remoteInvoices) {
+          dbService.run(
+            `INSERT OR REPLACE INTO sales_invoices (id, invoice_no, customer_id, invoice_date, total_amount, discount_amount, cash_received, balance_amount, notes, is_void, void_reason, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              inv.id,
+              inv.invoice_no,
+              inv.customer_id,
+              inv.invoice_date,
+              inv.total_amount,
+              inv.discount_amount,
+              inv.cash_received,
+              inv.balance_amount,
+              inv.notes,
+              inv.is_void,
+              inv.void_reason,
+              inv.created_at,
+            ]
+          );
+        }
+        counts['sales_invoices'] = remoteInvoices.length;
+      }
+
+      // 5. Sales Invoice Items
+      const { data: remoteInvoiceItems } = await client.from('sales_invoice_items').select('*');
+      if (remoteInvoiceItems && remoteInvoiceItems.length > 0) {
+        for (const it of remoteInvoiceItems) {
+          dbService.run(
+            `INSERT OR REPLACE INTO sales_invoice_items (id, invoice_id, item_id, item_name, quantity, rate, line_total)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [it.id, it.invoice_id, it.item_id, it.item_name, it.quantity, it.rate, it.line_total]
+          );
+        }
+        counts['sales_invoice_items'] = remoteInvoiceItems.length;
+      }
+
+      // 6. CNC Jobs
+      const { data: remoteCnc } = await client.from('cnc_jobs').select('*');
+      if (remoteCnc && remoteCnc.length > 0) {
+        for (const j of remoteCnc) {
+          dbService.run(
+            `INSERT OR REPLACE INTO cnc_jobs (id, job_no, customer_id, customer_name_manual, job_description, size_specification, total_amount, paid_amount, remaining_amount, status, notes, job_date, is_void, void_reason, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              j.id,
+              j.job_no,
+              j.customer_id,
+              j.customer_name_manual,
+              j.job_description,
+              j.size_specification,
+              j.total_amount,
+              j.paid_amount,
+              j.remaining_amount,
+              j.status,
+              j.notes,
+              j.job_date,
+              j.is_void,
+              j.void_reason,
+              j.created_at,
+            ]
+          );
+        }
+        counts['cnc_jobs'] = remoteCnc.length;
+      }
+
+      // 7. Customer Ledger Entries
+      const { data: remoteLedger } = await client.from('customer_ledger').select('*');
+      if (remoteLedger && remoteLedger.length > 0) {
+        for (const l of remoteLedger) {
+          dbService.run(
+            `INSERT OR REPLACE INTO customer_ledger (id, customer_id, entry_date, ref_type, ref_id, description, debit, credit, is_void, void_reason, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              l.id,
+              l.customer_id,
+              l.entry_date,
+              l.ref_type,
+              l.ref_id,
+              l.description,
+              l.debit,
+              l.credit,
+              l.is_void,
+              l.void_reason,
+              l.created_at,
+            ]
+          );
+        }
+        counts['customer_ledger'] = remoteLedger.length;
+      }
+
+      // 8. Daily Expenses
+      const { data: remoteExpenses } = await client.from('expenses').select('*');
+      if (remoteExpenses && remoteExpenses.length > 0) {
+        for (const e of remoteExpenses) {
+          dbService.run(
+            `INSERT OR REPLACE INTO expenses (id, expense_date, category, description, amount, payment_method, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [e.id, e.expense_date, e.category, e.description, e.amount, e.payment_method || 'CASH', e.created_at]
+          );
+        }
+        counts['expenses'] = remoteExpenses.length;
+      }
+
+      // 9. Suppliers
+      const { data: remoteSuppliers } = await client.from('suppliers').select('*');
+      if (remoteSuppliers && remoteSuppliers.length > 0) {
+        for (const s of remoteSuppliers) {
+          dbService.run(
+            `INSERT OR REPLACE INTO suppliers (id, name, company_name, phone, address, created_at)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [s.id, s.name, s.company_name, s.phone, s.address, s.created_at]
+          );
+        }
+        counts['suppliers'] = remoteSuppliers.length;
+      }
+
+      // 10. Karigars
+      const { data: remoteKarigars } = await client.from('karigars').select('*');
+      if (remoteKarigars && remoteKarigars.length > 0) {
+        for (const k of remoteKarigars) {
+          dbService.run(
+            `INSERT OR REPLACE INTO karigars (id, name, phone, role, wage_type, daily_wage, is_active, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [k.id, k.name, k.phone, k.role, k.wage_type, k.daily_wage, k.is_active, k.created_at]
+          );
+        }
+        counts['karigars'] = remoteKarigars.length;
+      }
+
+      // 11. Quotations
+      const { data: remoteQuotes } = await client.from('quotations').select('*');
+      if (remoteQuotes && remoteQuotes.length > 0) {
+        for (const q of remoteQuotes) {
+          dbService.run(
+            `INSERT OR REPLACE INTO quotations (id, quote_no, customer_id, customer_name, customer_phone, quote_date, expiry_date, total_amount, discount_amount, status, notes, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              q.id,
+              q.quote_no,
+              q.customer_id,
+              q.customer_name,
+              q.customer_phone,
+              q.quote_date,
+              q.expiry_date,
+              q.total_amount,
+              q.discount_amount,
+              q.status,
+              q.notes,
+              q.created_at,
+            ]
+          );
+        }
+        counts['quotations'] = remoteQuotes.length;
+      }
+
+      // Refresh Workshop Store UI after pulling
+      if (typeof window !== 'undefined' && (window as any).__workshopStore) {
+        (window as any).__workshopStore.getState().refreshAll();
+      }
+
+      return {
+        success: true,
+        message: 'Cloud data kamyabi se local database mein download ho gaya!',
+        counts,
+      };
+    } catch (err: any) {
+      console.warn('Supabase pull notice:', err);
+      return {
+        success: false,
+        message: `Cloud Pull Notice: ${err.message || err}`,
+      };
+    }
+  },
+
+  /**
+   * PUSH: Uploads local SQLite data up to Supabase Cloud
+   */
   async pushAllToSupabase(): Promise<SyncResult> {
     if (!isSupabaseConfigured()) {
       return {
