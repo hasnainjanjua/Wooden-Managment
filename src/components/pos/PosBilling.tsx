@@ -189,7 +189,7 @@ export const PosBilling: React.FC = () => {
       >
         {/* Category Tabs, Direct Item & Search Bar */}
         <div className="p-3 border-b border-slate-200 space-y-2.5 bg-slate-50">
-          {/* Quick Actions Header: Add Stock Item & Timber Calculator */}
+          {/* Quick Actions Header: Add Stock Item & Timber Calculator & Invoices */}
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -198,16 +198,25 @@ export const PosBilling: React.FC = () => {
               title="Add a new item to Catalog/Stock"
             >
               <PackagePlus className="w-4 h-4" />
-              <span>+ New Item</span>
+              <span>+ Item</span>
             </button>
             <button
               type="button"
               onClick={() => setIsTimberModalOpen(true)}
-              className="py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95 border border-amber-600 cursor-pointer"
+              className="py-2 px-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95 border border-amber-600 cursor-pointer"
               title="Timber CFT & Sheet SFT Dimension Calculator"
             >
               <Trees className="w-4 h-4 text-amber-200" />
-              <span>Timber / SFT Calc</span>
+              <span>Timber / SFT</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('invoices')}
+              className="py-2 px-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+              title="Open Recent Sales & Invoices Register"
+            >
+              <History className="w-4 h-4 text-amber-400" />
+              <span>Recent Bills</span>
             </button>
           </div>
 

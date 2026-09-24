@@ -1,9 +1,5 @@
 import React, { useState } from 'react';
 import {
-  History,
-  Printer,
-  ShieldCheck,
-  FileText,
   Store,
   Phone,
   MapPin,
@@ -13,56 +9,35 @@ import {
   KeyRound,
   Shield,
   Settings,
-  RefreshCw,
   Download,
   Upload,
   Laptop,
   Smartphone,
-  Database,
-  ExternalLink,
   Cloud,
-  AlertTriangle,
+  RefreshCw,
+  User,
+  ShieldCheck,
 } from 'lucide-react';
 import { useWorkshopStore } from '../../store/useWorkshopStore';
-import { formatPKR, formatDate } from '../../utils/currency';
 import { ShopSettings } from '../../types';
-import {
-  getSupabaseAnonKey,
-  setSupabaseAnonKey,
-  isSupabaseConfigured,
-  SUPABASE_URL,
-} from '../../services/supabaseClient';
 import { supabaseSyncService } from '../../services/supabaseSyncService';
 
 export const SettingsBackup: React.FC = () => {
-  const invoices = useWorkshopStore((state) => state.invoices);
-  const openVoidModal = useWorkshopStore((state) => state.openVoidModal);
-  const reprintInvoice = useWorkshopStore((state) => state.reprintInvoice);
   const shopSettings = useWorkshopStore((state) => state.shopSettings);
   const updateShopSettings = useWorkshopStore((state) => state.updateShopSettings);
   const updatePinSettings = useWorkshopStore((state) => state.updatePinSettings);
   const showToast = useWorkshopStore((state) => state.showToast);
   const currentUser = useWorkshopStore((state) => state.currentUser);
   const changeUserPassword = useWorkshopStore((state) => state.changeUserPassword);
-  const logout = useWorkshopStore((state) => state.logout);
 
   // Portable Backup & Restore
   const exportDatabaseFile = useWorkshopStore((state) => state.exportDatabaseFile);
   const importDatabaseFile = useWorkshopStore((state) => state.importDatabaseFile);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
-  // Supabase State
-  const [supabaseAnonKeyInput, setSupabaseAnonKeyInput] = useState(() => getSupabaseAnonKey());
-  const [isSupabaseTesting, setIsSupabaseTesting] = useState(false);
-  const [isSupabaseSyncing, setIsSupabaseSyncing] = useState(false);
-  const [supabaseNotice, setSupabaseNotice] = useState<{ text: string; isError: boolean } | null>(null);
-
   // Shop Settings Form
   const [formData, setFormData] = useState<ShopSettings>({ ...shopSettings });
   const [isSavedNotice, setIsSavedNotice] = useState(false);
-
-  // Invoice Search Filter
-  const [invoiceSearch, setInvoiceSearch] = useState('');
 
   // Security PIN Form
   const [oldPin, setOldPin] = useState('');
@@ -75,6 +50,10 @@ export const SettingsBackup: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordNotice, setPasswordNotice] = useState('');
+
+  // Auto-sync status
+  const [isSyncingNow, setIsSyncingNow] = useState(false);
+  const [syncStatusNotice, setSyncStatusNotice] = useState('');
 
   const handleChangePassword = (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,71 +136,42 @@ export const SettingsBackup: React.FC = () => {
     e.target.value = '';
   };
 
-  const handleSaveSupabaseKey = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!supabaseAnonKeyInput.trim()) {
-      showToast('Baraye meherbani Supabase Anon Key darj karein', 'error');
-      return;
-    }
-    setSupabaseAnonKey(supabaseAnonKeyInput.trim());
-    setSupabaseNotice({ text: 'Supabase Anon Key kamyabi se save ho gayi!', isError: false });
-    showToast('Supabase Key Save Ho Gayi!', 'success');
-  };
-
-  const handleTestSupabase = async () => {
-    setIsSupabaseTesting(true);
-    setSupabaseNotice(null);
-    try {
-      const res = await supabaseSyncService.testConnection();
-      setSupabaseNotice({ text: res.message, isError: !res.success });
-      if (res.success) {
-        showToast(res.message, 'success');
-      } else {
-        showToast(res.message, 'error');
-      }
-    } finally {
-      setIsSupabaseTesting(false);
-    }
-  };
-
-  const handlePushSupabase = async () => {
-    setIsSupabaseSyncing(true);
-    setSupabaseNotice(null);
+  const handleManualSync = async () => {
+    setIsSyncingNow(true);
+    setSyncStatusNotice('');
     try {
       const res = await supabaseSyncService.pushAllToSupabase();
-      setSupabaseNotice({ text: res.message, isError: !res.success });
       if (res.success) {
-        showToast(res.message, 'success');
+        setSyncStatusNotice('Tamam data cloud par kamyabi se sync ho gaya!');
+        showToast('Cloud Database Sync Mukammal!', 'success');
       } else {
-        showToast(res.message, 'error');
+        setSyncStatusNotice(res.message);
+        showToast(res.message, 'info');
       }
     } finally {
-      setIsSupabaseSyncing(false);
+      setIsSyncingNow(false);
+      setTimeout(() => setSyncStatusNotice(''), 5000);
     }
   };
-
-  const filteredInvoices = invoices.filter((inv) => {
-    const q = invoiceSearch.toLowerCase().trim();
-    return (
-      q === '' ||
-      inv.invoice_no.toLowerCase().includes(q) ||
-      (inv.customer_name && inv.customer_name.toLowerCase().includes(q))
-    );
-  });
 
   return (
     <div className="h-[calc(100vh-105px)] overflow-y-auto bg-slate-100 p-4 md:p-6 space-y-6">
       {/* ========================================================================= */}
       {/* 1. SHOP PROFILE & CONTACT SETTINGS (For Prints & WhatsApp)               */}
       {/* ========================================================================= */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
-          <div className="flex items-center gap-2.5 text-amber-700 font-extrabold text-sm">
-            <Store className="w-5 h-5 text-amber-600" />
-            <span>Dukan Ka Profile & Raabta (Shop Contact & Print Settings)</span>
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-4 mb-5">
+          <div className="flex items-center gap-3 text-amber-800 font-extrabold text-sm">
+            <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700">
+              <Store className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-base text-slate-900 font-black">Dukan Ka Profile & Raabta (Shop Contact & Print Details)</span>
+              <p className="text-xs text-slate-500 font-medium">Invoices, Print Slips aur WhatsApp messages par yehi maloomat print hogi</p>
+            </div>
           </div>
           {isSavedNotice && (
-            <span className="text-emerald-700 text-xs font-bold flex items-center gap-1">
+            <span className="text-emerald-700 text-xs font-bold flex items-center gap-1.5 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 animate-in fade-in">
               <Check className="w-4 h-4" />
               Settings Save Ho Gayin!
             </span>
@@ -232,27 +182,27 @@ export const SettingsBackup: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Shop Name (English)
+                Shop Name (English Name) <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={formData.shop_name}
                 onChange={(e) => setFormData({ ...formData, shop_name: e.target.value })}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-xs"
               />
             </div>
 
             <div>
               <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Shop Title (Urdu / اردو نام)
+                Shop Title (Urdu Calligraphy / اردو نام) <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={formData.urdu_title}
                 onChange={(e) => setFormData({ ...formData, urdu_title: e.target.value })}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-urdu font-bold focus:outline-none focus:ring-2 focus:ring-amber-500 text-right shadow-sm"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 font-urdu font-bold focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-xs text-right"
               />
             </div>
           </div>
@@ -260,247 +210,201 @@ export const SettingsBackup: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Primary Phone / Mobile (WhatsApp)
-              </label>
-              <div className="relative">
-                <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  required
-                  value={formData.phone1}
-                  onChange={(e) => setFormData({ ...formData, phone1: e.target.value })}
-                  placeholder="0300-1234567"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium shadow-sm"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Secondary Phone (Optional)
-              </label>
-              <div className="relative">
-                <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  value={formData.phone2}
-                  onChange={(e) => setFormData({ ...formData, phone2: e.target.value })}
-                  placeholder="0321-9876543"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium shadow-sm"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Tagline / Work Subtitle
+                Primary Phone / Mobile (پرائمری فون) <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
-                value={formData.tagline}
+                required
+                value={formData.phone1}
+                onChange={(e) => setFormData({ ...formData, phone1: e.target.value })}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                Secondary Phone / PTCL (دوسرا فون)
+              </label>
+              <input
+                type="text"
+                value={formData.phone2 || ''}
+                onChange={(e) => setFormData({ ...formData, phone2: e.target.value })}
+                placeholder="Optional"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                Tagline / Karobar Ki Wazahath
+              </label>
+              <input
+                type="text"
+                value={formData.tagline || ''}
                 onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
-                placeholder="Wooden Doors, Hardware, Polish & Jali"
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-xs"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Workshop Address (Print پر آئے گا)
-              </label>
-              <div className="relative">
-                <MapPin className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  required
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="Main Timber Market, G.T Road"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Receipt Footer Terms / Sharaait (شراٸط)
-              </label>
-              <input
-                type="text"
-                value={formData.receipt_footer}
-                onChange={(e) => setFormData({ ...formData, receipt_footer: e.target.value })}
-                placeholder="سامان چیک کر کے وصول کریں۔ خریدا ہوا مال واپس نہیں ہوگا۔"
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 font-urdu shadow-sm"
-              />
-            </div>
+          <div>
+            <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+              Workshop / Showroom Address (مکمل پتہ) <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-xs"
+            />
           </div>
 
-          <div className="flex justify-end pt-2">
+          <div>
+            <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+              Receipt Footer Note / Return Policy (رسید کے نیچے اردو نوٹ)
+            </label>
+            <input
+              type="text"
+              value={formData.receipt_footer || ''}
+              onChange={(e) => setFormData({ ...formData, receipt_footer: e.target.value })}
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-urdu font-bold focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-xs text-right"
+            />
+          </div>
+
+          <div className="flex justify-end pt-2 border-t border-slate-100">
             <button
               type="submit"
-              className="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm active:scale-95"
+              className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs shadow-sm transition flex items-center gap-2 active:scale-95 cursor-pointer"
             >
               <Save className="w-4 h-4" />
-              <span>Save Shop Profile (سیٹنگز محفوظ کریں)</span>
+              <span>Dukan Ki Settings Mehfooz Karein</span>
             </button>
           </div>
         </form>
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. ACTIVE USER SESSION & ACCOUNT SECURITY                                 */}
+      {/* 2. USER ACCOUNT & PASSWORD MANAGEMENT                                    */}
       {/* ========================================================================= */}
-      {currentUser && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-3 gap-3">
-            <div className="flex items-center gap-2.5 text-amber-700 font-extrabold text-sm">
-              <ShieldCheck className="w-5 h-5 text-amber-600" />
-              <span>Active User Account & Login Password (موجودہ سیشن و لاگ ان)</span>
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+          <div className="flex items-center gap-3 text-slate-900 font-bold">
+            <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-700">
+              <User className="w-5 h-5" />
             </div>
-            {passwordNotice && (
-              <span className="text-emerald-700 text-xs font-bold flex items-center gap-1">
-                <Check className="w-4 h-4" />
-                <span>{passwordNotice}</span>
-              </span>
-            )}
+            <div>
+              <span className="text-base font-black">User Account & Security Settings (یوزر اکاونٹ و پاس ورڈ)</span>
+              <p className="text-xs text-slate-500 font-medium">
+                Mojooda User: <strong className="text-slate-800">{currentUser?.full_name || 'Admin'}</strong> ({currentUser?.role || 'ADMIN'})
+              </p>
+            </div>
           </div>
-
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-200 text-amber-800 flex items-center justify-center font-black text-lg">
-                {currentUser.role === 'ADMIN' ? '👑' : '🛒'}
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                  <span>{currentUser.full_name}</span>
-                  <span className="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">
-                    {currentUser.role}
-                  </span>
-                </h4>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Username: <strong className="font-mono text-slate-700">@{currentUser.username}</strong> | Web Session Active
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm('Kya aap waqai portal se Log out hona chahte hain?')) {
-                  logout();
-                }
-              }}
-              className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
-            >
-              <span>Logout (لاگ آؤٹ)</span>
-            </button>
-          </div>
-
-          {/* Change Account Password Form */}
-          <form onSubmit={handleChangePassword} className="pt-2 space-y-3">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
-              <KeyRound className="w-4 h-4 text-amber-600" />
-              <span>Apna Web Login Password Tabdeel Karein (Change Password):</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                  Purana Password <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={oldPassword}
-                  onChange={(e) => setOldPassword(e.target.value)}
-                  placeholder="Current password"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                  Naya Password <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="New password"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                  Confirm Naya Password <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm new password"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-1">
-              <button
-                type="submit"
-                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs shadow-sm transition flex items-center gap-1.5 active:scale-95 cursor-pointer"
-              >
-                <KeyRound className="w-3.5 h-3.5" />
-                <span>Naya Password Save Karein</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* 3. SECURITY PIN CODE SETTINGS (سیکیورٹی پن لاک)                           */}
-      {/* ========================================================================= */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-3 gap-3">
-          <div className="flex items-center gap-2.5 text-amber-700 font-extrabold text-sm">
-            <Lock className="w-5 h-5 text-amber-600" />
-            <span>App Security & PIN Lock Settings (سیکیورٹی پن کوڈ)</span>
-          </div>
-          {pinNotice && (
-            <span className="text-emerald-700 text-xs font-bold flex items-center gap-1">
-              <Check className="w-4 h-4" />
-              <span>{pinNotice}</span>
+          {passwordNotice && (
+            <span className="text-emerald-700 text-xs font-bold flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200">
+              <Check className="w-3.5 h-3.5" />
+              {passwordNotice}
             </span>
           )}
         </div>
 
-        {/* PIN Enable / Disable Status */}
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
-              (shopSettings.pin_enabled ?? 1) === 1
-                ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                : 'bg-slate-200 text-slate-500 border border-slate-300'
-            }`}>
+        <form onSubmit={handleChangePassword} className="space-y-4 pt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                Mojooda Password <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="password"
+                required
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
+                placeholder="Current password"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                Naya Password <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="password"
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="New password"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                Confirm Naya Password <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-1">
+            <button
+              type="submit"
+              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-sm transition flex items-center gap-1.5 active:scale-95 cursor-pointer"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>Password Tabdeel Karein</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 3. SCREEN LOCK & 4-DIGIT SECURITY PIN                                    */}
+      {/* ========================================================================= */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+          <div className="flex items-center gap-3 text-slate-900 font-bold">
+            <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700">
               <Shield className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-xs font-bold text-slate-900">
-                App PIN Protection: {(shopSettings.pin_enabled ?? 1) === 1 ? (
-                  <span className="text-emerald-700 font-extrabold">Active (آن ہے)</span>
-                ) : (
-                  <span className="text-rose-700 font-extrabold">Disabled (بند ہے)</span>
-                )}
-              </h4>
-              <p className="text-[11px] text-slate-600 mt-0.5">
+              <span className="text-base font-black">Security PIN Lock (سکرین لاک پن کوڈ)</span>
+              <p className="text-xs text-slate-500 font-medium">
+                Counter chore kar jatay waqt quick screen lock lagane ke liye 4-digit PIN
+              </p>
+            </div>
+          </div>
+          {pinNotice && (
+            <span className="text-emerald-700 text-xs font-bold flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200">
+              <Check className="w-3.5 h-3.5" />
+              {pinNotice}
+            </span>
+          )}
+        </div>
+
+        {/* PIN Enable / Disable Toggle */}
+        <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-3.5 h-3.5 rounded-full ${
+                (shopSettings.pin_enabled ?? 1) === 1 ? 'bg-emerald-500 ring-4 ring-emerald-100' : 'bg-slate-300'
+              }`}
+            />
+            <div>
+              <span className="text-xs font-bold text-slate-800">
+                PIN Protection Status: {(shopSettings.pin_enabled ?? 1) === 1 ? 'ACTIVE (شروع ہے)' : 'DISABLED (بند ہے)'}
+              </span>
+              <p className="text-[11px] text-slate-500 mt-0.5">
                 {(shopSettings.pin_enabled ?? 1) === 1
-                  ? 'App open karne par aur "Lock Screen" dabane par 4-digit PIN required hoga.'
-                  : 'PIN protection filhal band hai; koi bhi user bina PIN ke software open kar sakta hai.'}
+                  ? 'App open hone par aur "Lock Screen" dabane par 4-digit PIN darj karna hoga.'
+                  : 'PIN protection filhal band hai.'}
               </p>
             </div>
           </div>
@@ -508,7 +412,7 @@ export const SettingsBackup: React.FC = () => {
           <button
             type="button"
             onClick={handleTogglePinEnabled}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition border self-start sm:self-auto ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition border self-start sm:self-auto cursor-pointer ${
               (shopSettings.pin_enabled ?? 1) === 1
                 ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
                 : 'bg-emerald-600 text-white border-emerald-500 hover:bg-emerald-700 shadow-sm'
@@ -528,7 +432,7 @@ export const SettingsBackup: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Purana PIN (Current PIN) <span className="text-rose-500">*</span>
+                Mojooda PIN <span className="text-rose-500">*</span>
               </label>
               <input
                 type="password"
@@ -537,7 +441,7 @@ export const SettingsBackup: React.FC = () => {
                 value={oldPin}
                 onChange={(e) => setOldPin(e.target.value)}
                 placeholder="Current PIN"
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono text-center tracking-widest text-sm shadow-sm"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono text-center tracking-widest text-sm shadow-xs"
               />
             </div>
 
@@ -552,7 +456,7 @@ export const SettingsBackup: React.FC = () => {
                 value={newPin}
                 onChange={(e) => setNewPin(e.target.value)}
                 placeholder="e.g. 5678"
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-emerald-700 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-center tracking-widest text-sm shadow-sm"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-emerald-700 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-center tracking-widest text-sm shadow-xs"
               />
             </div>
 
@@ -567,7 +471,7 @@ export const SettingsBackup: React.FC = () => {
                 value={confirmPin}
                 onChange={(e) => setConfirmPin(e.target.value)}
                 placeholder="e.g. 5678"
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-emerald-700 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-center tracking-widest text-sm shadow-sm"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-emerald-700 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-center tracking-widest text-sm shadow-xs"
               />
             </div>
           </div>
@@ -575,7 +479,7 @@ export const SettingsBackup: React.FC = () => {
           <div className="flex justify-end pt-1">
             <button
               type="submit"
-              className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs shadow-sm transition flex items-center gap-1.5 active:scale-95"
+              className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs shadow-sm transition flex items-center gap-1.5 active:scale-95 cursor-pointer"
             >
               <KeyRound className="w-3.5 h-3.5" />
               <span>PIN Code Tabdeel Karein</span>
@@ -587,307 +491,116 @@ export const SettingsBackup: React.FC = () => {
       {/* ========================================================================= */}
       {/* 4. PORTABLE DATABASE BACKUP & RESTORE (.sqlite)                           */}
       {/* ========================================================================= */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-3 gap-3">
-          <div className="flex items-center gap-2.5 text-amber-700 font-extrabold text-sm">
-            <Download className="w-5 h-5 text-amber-600" />
-            <span>Portable Database Backup & Restore (ڈیٹا فائل بیک اپ و ریسٹور)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-mono font-bold bg-slate-100 text-slate-700 px-3 py-1 rounded-lg border border-slate-200">
-              Format: <strong className="text-amber-700">.sqlite / .db</strong>
-            </span>
-          </div>
-        </div>
-
-        <p className="text-xs text-slate-600 leading-relaxed">
-          Aap kisi bhi waqt offline backup ke liye mukammal database file download kar sakty hain ya purani backup file restore kar sakty hain:
-        </p>
-
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between space-y-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={exportDatabaseFile}
-                className="flex-1 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs shadow-sm transition flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
-              >
-                <Download className="w-4 h-4" />
-                <span>Export Data File (.sqlite)</span>
-              </button>
-
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileImport}
-                accept=".sqlite,.db"
-                className="hidden"
-              />
-
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex-1 px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
-              >
-                <Upload className="w-4 h-4 text-slate-600" />
-                <span>Import Data File (.sqlite)</span>
-              </button>
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-4 gap-3">
+          <div className="flex items-center gap-3 text-slate-900 font-bold">
+            <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700">
+              <Download className="w-5 h-5" />
             </div>
-
-            <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 font-medium pt-1">
-              <Laptop className="w-3.5 h-3.5 text-slate-400" />
-              <span>Shop PC</span>
-              <span>⇄</span>
-              <Smartphone className="w-3.5 h-3.5 text-slate-400" />
-              <span>Mobile Phone</span>
-              <span>⇄</span>
-              <Laptop className="w-3.5 h-3.5 text-slate-400" />
-              <span>Home Laptop</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 5. SUPABASE CLOUD DATABASE INTEGRATION                                    */}
-      {/* ========================================================================= */}
-      <div className="bg-white border-2 border-emerald-500/50 rounded-2xl p-5 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-3 gap-3">
-          <div className="flex items-center gap-2.5 text-emerald-800 font-extrabold text-sm">
-            <Database className="w-5 h-5 text-emerald-600" />
-            <span>Supabase Cloud Database (آن لائن کلاؤڈ ڈیٹا بیس)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span
-              className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                isSupabaseConfigured()
-                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                  : 'bg-amber-100 text-amber-800 border border-amber-300'
-              }`}
-            >
-              {isSupabaseConfigured() ? '✓ Connected' : '⚠️ Anon Key Required'}
-            </span>
-          </div>
-        </div>
-
-        {/* Supabase URL & Anon Key */}
-        <div className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Supabase Project URL
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={SUPABASE_URL}
-                  className="w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-700 font-mono shadow-xs select-all"
-                />
-                <a
-                  href="https://supabase.com/dashboard/project/anqzmsmknttmfqkgzihz"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 border border-slate-300 transition shrink-0"
-                  title="Open Supabase Dashboard"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                </a>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Supabase Anon Key (Project API Key)
-              </label>
-              <form onSubmit={handleSaveSupabaseKey} className="flex gap-2">
-                <input
-                  type="password"
-                  value={supabaseAnonKeyInput}
-                  onChange={(e) => setSupabaseAnonKeyInput(e.target.value)}
-                  placeholder="Paste anon key (eyJhbGci...)"
-                  className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
-                />
-                <button
-                  type="submit"
-                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer whitespace-nowrap"
-                >
-                  Save Key
-                </button>
-              </form>
+              <span className="text-base font-black">Portable Database Backup & Restore (پورٹ ایبل ڈیٹا فائل)</span>
+              <p className="text-xs text-slate-500 font-medium">
+                Offline backup file download karein ya USB / PC se purana data restore karein
+              </p>
             </div>
           </div>
-
-          {/* Action buttons: Test Connection & Push Data */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={handleTestSupabase}
-                disabled={isSupabaseTesting}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition border border-slate-300 flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isSupabaseTesting ? 'animate-spin' : ''}`} />
-                <span>{isSupabaseTesting ? 'Testing...' : 'Test Connection'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handlePushSupabase}
-                disabled={isSupabaseSyncing}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
-              >
-                <Cloud className={`w-3.5 h-3.5 ${isSupabaseSyncing ? 'animate-spin' : ''}`} />
-                <span>{isSupabaseSyncing ? 'Uploading to Supabase...' : 'Push All Local Data to Supabase'}</span>
-              </button>
-            </div>
-
-            <a
-              href="https://supabase.com/dashboard/project/anqzmsmknttmfqkgzihz/sql/new"
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1"
-            >
-              <span>Open Supabase SQL Editor</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          </div>
-
-          {supabaseNotice && (
-            <div
-              className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
-                supabaseNotice.isError
-                  ? 'bg-rose-50 text-rose-800 border border-rose-200'
-                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-              }`}
-            >
-              {supabaseNotice.isError ? (
-                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-              ) : (
-                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-              )}
-              <span>{supabaseNotice.text}</span>
-            </div>
-          )}
-
-          {/* Quick Setup Guide banner */}
-          <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 space-y-1">
-            <span className="font-black uppercase tracking-wider block text-[10px]">
-              📋 Supabase Setup Guide:
-            </span>
-            <p className="text-[11px] leading-relaxed">
-              1. Project root mein <code className="bg-white px-1.5 py-0.5 rounded border border-amber-300 font-bold">supabase-schema.sql</code> file tayyar hai.
-              Uska content copy kar ke apne <a href="https://supabase.com/dashboard/project/anqzmsmknttmfqkgzihz/sql/new" target="_blank" rel="noreferrer" className="underline font-bold text-emerald-700">Supabase SQL Editor</a> mein paste karein aur <strong>Run</strong> karein.
-              <br />
-              2. Supabase Dashboard se <strong>Project Settings ➔ API ➔ anon key</strong> copy kar ke upar save karein.
-            </p>
-          </div>
+          <span className="text-[11px] font-mono font-bold bg-slate-100 text-slate-700 px-3 py-1.5 rounded-xl border border-slate-200 self-start sm:self-auto">
+            Format: <strong className="text-amber-700">.sqlite / .db</strong>
+          </span>
         </div>
-      </div>
 
-      {/* ========================================================================= */}
-      {/* 5. SALES INVOICES AUDIT LOG & RE-PRINT SLIPS                               */}
-      {/* ========================================================================= */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50">
-          <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
-            <History className="w-4 h-4 text-amber-600" />
-            <span>Recent Sales Invoices & Re-Print (پرانے بل ری پرنٹ کریں)</span>
-          </div>
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4">
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={exportDatabaseFile}
+              className="flex-1 min-w-[200px] px-5 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-xs shadow-sm transition flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+            >
+              <Download className="w-4 h-4" />
+              <span>Export Portable Database (.sqlite)</span>
+            </button>
 
-          <div className="flex items-center gap-3">
             <input
-              type="text"
-              value={invoiceSearch}
-              onChange={(e) => setInvoiceSearch(e.target.value)}
-              placeholder="Search bill no / customer..."
-              className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileImport}
+              accept=".sqlite,.db"
+              className="hidden"
             />
-            <span className="text-xs text-slate-500 font-medium">
-              Total {filteredInvoices.length} Bills
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 min-w-[200px] px-5 py-3 bg-white hover:bg-slate-100 text-slate-800 font-black rounded-xl text-xs transition flex items-center justify-center gap-2 active:scale-95 border border-slate-300 cursor-pointer shadow-xs"
+            >
+              <Upload className="w-4 h-4 text-slate-600" />
+              <span>Import Data File (.sqlite)</span>
+            </button>
+          </div>
+
+          <div className="flex items-center justify-center gap-3 text-[11px] text-slate-500 font-medium pt-1">
+            <span className="flex items-center gap-1">
+              <Laptop className="w-3.5 h-3.5 text-slate-400" />
+              Shop Counter PC
+            </span>
+            <span className="text-slate-300">⇄</span>
+            <span className="flex items-center gap-1">
+              <Smartphone className="w-3.5 h-3.5 text-slate-400" />
+              Mobile / Tablet
+            </span>
+            <span className="text-slate-300">⇄</span>
+            <span className="flex items-center gap-1">
+              <Laptop className="w-3.5 h-3.5 text-slate-400" />
+              Home Laptop
             </span>
           </div>
         </div>
+      </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-100 text-slate-600 uppercase text-[10px] tracking-wider border-b border-slate-200">
-              <tr>
-                <th className="py-2.5 pl-4 pr-2">Bill No</th>
-                <th className="py-2.5 px-2">Tareekh</th>
-                <th className="py-2.5 px-2">Customer</th>
-                <th className="py-2.5 px-2 text-right">Net Bill</th>
-                <th className="py-2.5 px-2 text-right">Naqad Wasool</th>
-                <th className="py-2.5 px-2 text-right">Baqaya</th>
-                <th className="py-2.5 px-2 text-center">Status</th>
-                <th className="py-2.5 pr-4 pl-2 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredInvoices.map((inv) => {
-                const isVoid = inv.is_void === 1;
-                const net = inv.total_amount - inv.discount_amount;
+      {/* ========================================================================= */}
+      {/* 5. CLOUD AUTO-SYNC STATUS & HEALTH                                        */}
+      {/* ========================================================================= */}
+      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-3xl p-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+              <Cloud className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-black text-emerald-950">
+                  Automatic Cloud Database Sync (خودکار آن لائن ہم آہنگی)
+                </h3>
+                <span className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  Auto-Active
+                </span>
+              </div>
+              <p className="text-xs text-emerald-800/80 font-medium mt-0.5">
+                Har sale, payment aur khata entry background mein automatically cloud database se sync ho rahi hai.
+              </p>
+            </div>
+          </div>
 
-                return (
-                  <tr
-                    key={inv.id}
-                    className={`hover:bg-slate-50 transition ${
-                      isVoid ? 'opacity-40 line-through bg-rose-50/50' : ''
-                    }`}
-                  >
-                    <td className="py-3 pl-4 pr-2 font-mono font-bold text-amber-700">
-                      {inv.invoice_no}
-                    </td>
-                    <td className="py-3 px-2 text-slate-600">{formatDate(inv.invoice_date)}</td>
-                    <td className="py-3 px-2 font-bold text-slate-900">
-                      {inv.customer_name || 'Walk-in Cash'}
-                    </td>
-                    <td className="py-3 px-2 text-right font-black text-slate-900">
-                      {formatPKR(net)}
-                    </td>
-                    <td className="py-3 px-2 text-right font-bold text-emerald-700">
-                      {formatPKR(inv.cash_received)}
-                    </td>
-                    <td className="py-3 px-2 text-right font-black text-rose-700">
-                      {formatPKR(inv.balance_amount)}
-                    </td>
-                    <td className="py-3 px-2 text-center">
-                      {isVoid ? (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-200">
-                          Mansookh (Void)
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 border border-emerald-200">
-                          Active
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 pr-4 pl-2 text-right space-x-1.5">
-                      <button
-                        onClick={() => reprintInvoice(inv.id)}
-                        className="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold transition inline-flex items-center gap-1 border border-amber-300"
-                        title="Print 80mm Slip"
-                      >
-                        <Printer className="w-3 h-3" />
-                        <span>Print Slip</span>
-                      </button>
-
-                      {!isVoid && (
-                        <button
-                          onClick={() => openVoidModal('invoice', inv.id, inv.invoice_no)}
-                          className="px-2.5 py-1 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-300 hover:border-rose-300 rounded-lg text-xs font-semibold transition"
-                          title="Mansookh (Void) Karein"
-                        >
-                          Void
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={handleManualSync}
+              disabled={isSyncingNow}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-xs flex items-center gap-1.5 active:scale-95 disabled:opacity-50 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingNow ? 'animate-spin' : ''}`} />
+              <span>{isSyncingNow ? 'Syncing...' : 'Sync Now (ابھی ہم آہنگ کریں)'}</span>
+            </button>
+          </div>
         </div>
+
+        {syncStatusNotice && (
+          <div className="mt-3 p-3 bg-white/90 border border-emerald-300 rounded-xl text-xs font-bold text-emerald-900 flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{syncStatusNotice}</span>
+          </div>
+        )}
       </div>
     </div>
   );

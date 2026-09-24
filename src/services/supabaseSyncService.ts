@@ -11,6 +11,8 @@ import { karigarRepo } from '../db/repositories/karigarRepo';
 import { quotationRepo } from '../db/repositories/quotationRepo';
 import { challanRepo } from '../db/repositories/challanRepo';
 import { drawingRepo } from '../db/repositories/drawingRepo';
+import { settingsRepo } from '../db/repositories/settingsRepo';
+import { userRepo } from '../db/repositories/userRepo';
 
 export interface SyncResult {
   success: boolean;
@@ -18,15 +20,75 @@ export interface SyncResult {
   counts?: { [table: string]: number };
 }
 
+let _autoSyncTimer: any = null;
+let _isAutoSyncing = false;
+let _lastSyncTimestamp: string | null = null;
+let _syncStatus: 'IDLE' | 'SYNCING' | 'SYNCED' | 'OFFLINE' = 'IDLE';
+
 export const supabaseSyncService = {
   isConfigured: () => isSupabaseConfigured(),
   getUrl: () => SUPABASE_URL,
+
+  getSyncStatus() {
+    return {
+      status: _syncStatus,
+      lastSyncTimestamp: _lastSyncTimestamp,
+      isAutoSyncing: _isAutoSyncing,
+      isConfigured: isSupabaseConfigured(),
+    };
+  },
+
+  triggerAutoSync(delayMs = 3000) {
+    if (!isSupabaseConfigured()) return;
+    if (_autoSyncTimer) clearTimeout(_autoSyncTimer);
+    _autoSyncTimer = setTimeout(() => {
+      this.pushAllToSupabaseQuietly();
+    }, delayMs);
+  },
+
+  async pushAllToSupabaseQuietly(): Promise<void> {
+    if (!isSupabaseConfigured() || _isAutoSyncing) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      _syncStatus = 'OFFLINE';
+      return;
+    }
+
+    _isAutoSyncing = true;
+    _syncStatus = 'SYNCING';
+
+    try {
+      const res = await this.pushAllToSupabase();
+      if (res.success) {
+        _syncStatus = 'SYNCED';
+        _lastSyncTimestamp = new Date().toISOString();
+      } else {
+        _syncStatus = 'OFFLINE';
+      }
+    } catch (_) {
+      _syncStatus = 'OFFLINE';
+    } finally {
+      _isAutoSyncing = false;
+    }
+  },
+
+  initAutoSync() {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => {
+        this.triggerAutoSync(1000);
+      });
+
+      // Background periodic check every 60 seconds
+      setInterval(() => {
+        this.triggerAutoSync(500);
+      }, 60000);
+    }
+  },
 
   async testConnection(): Promise<{ success: boolean; message: string }> {
     if (!isSupabaseConfigured()) {
       return {
         success: false,
-        message: 'Supabase Anon Key darj nahi ki gayi. Shop Settings mein ja kar Key save karein.',
+        message: 'Supabase Cloud Database key configured nahi hai.',
       };
     }
 
@@ -60,7 +122,7 @@ export const supabaseSyncService = {
     if (!isSupabaseConfigured()) {
       return {
         success: false,
-        message: 'Supabase Anon Key required. Please configure it in Shop Settings.',
+        message: 'Supabase is not configured yet.',
       };
     }
 
@@ -68,6 +130,29 @@ export const supabaseSyncService = {
     const counts: { [table: string]: number } = {};
 
     try {
+      // 0. Shop Settings
+      try {
+        const settings = settingsRepo.get();
+        if (settings) {
+          await client.from('shop_settings').upsert({
+            id: 1,
+            shop_name: settings.shop_name,
+            shop_name_urdu: settings.urdu_title,
+            owner_name: settings.owner_name || 'Muhammad Ahmad',
+            phone1: settings.phone1,
+            phone2: settings.phone2 || '',
+            address: settings.address,
+            receipt_footer_urdu: settings.receipt_footer,
+            pin_enabled: settings.pin_enabled ?? 1,
+            app_pin: settings.app_pin || '1234',
+            updated_at: new Date().toISOString(),
+          });
+          counts['shop_settings'] = 1;
+        }
+      } catch (e) {
+        console.warn('Shop settings cloud sync notice:', e);
+      }
+
       // 1. Customers
       const customers = customerRepo.getAll();
       if (customers.length > 0) {
@@ -232,14 +317,14 @@ export const supabaseSyncService = {
 
       return {
         success: true,
-        message: 'Tamam local data Supabase Cloud par kamyabi se upload ho gaya!',
+        message: 'Tamam local data Supabase Cloud par kamyabi se auto-sync ho gaya!',
         counts,
       };
     } catch (err: any) {
-      console.error('Supabase Push error:', err);
+      console.warn('Supabase auto-sync note:', err);
       return {
         success: false,
-        message: `Upload Failed: ${err.message || err}`,
+        message: `Auto-Sync Notice: ${err.message || err}`,
       };
     }
   },

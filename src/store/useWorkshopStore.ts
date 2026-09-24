@@ -16,6 +16,7 @@ import { quotationRepo } from '../db/repositories/quotationRepo';
 import { challanRepo } from '../db/repositories/challanRepo';
 import { drawingRepo } from '../db/repositories/drawingRepo';
 import { cloudSyncService, CloudSyncStatus } from '../db/cloudSyncService';
+import { supabaseSyncService } from '../services/supabaseSyncService';
 import {
   Customer,
   CatalogItem,
@@ -51,6 +52,7 @@ const AUTH_SESSION_KEY = 'workshop_auth_session';
 
 export type AppTab =
   | 'pos'
+  | 'invoices'
   | 'quotations'
   | 'cnc'
   | 'khata'
@@ -449,6 +451,8 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
         drawings,
         cloudSyncStatus: cloudSyncService.getStatus(),
       });
+      // Trigger background auto-sync to Supabase
+      supabaseSyncService.triggerAutoSync();
     } catch (err) {
       console.error('Error refreshing data:', err);
     }

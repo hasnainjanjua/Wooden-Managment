@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   ShoppingBag,
+  History,
   Cpu,
   BookOpen,
   Receipt,
@@ -29,6 +30,7 @@ export const Header: React.FC = () => {
   const navItems = React.useMemo<{ id: AppTab; label: string; icon: any; shortcut?: string; badge?: number }[]>(
     () => [
       { id: 'pos', label: 'POS Billing', icon: ShoppingBag, shortcut: 'F1' },
+      { id: 'invoices', label: 'Sales & Bills', icon: History, shortcut: 'F6' },
       { id: 'quotations', label: 'Quotations', icon: FileText },
       { id: 'cnc', label: 'CNC Register', icon: Cpu, shortcut: 'F2' },
       { id: 'khata', label: 'Customer Khata', icon: BookOpen, shortcut: 'F3' },
@@ -53,15 +55,15 @@ export const Header: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base font-extrabold text-slate-900 tracking-wide">
-                AL MADINAH CNC AND WOOD WORKS
+                {shopSettings.shop_name}
               </h1>
               <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                ONLINE
+                ONLINE (AUTO-SYNC)
               </span>
             </div>
             <p className="text-xs text-amber-700 font-bold font-urdu">
-              المدینہ سی این سی اینڈ ووڈ ورکس
+              {shopSettings.urdu_title}
             </p>
           </div>
         </div>

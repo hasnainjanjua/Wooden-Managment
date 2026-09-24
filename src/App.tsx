@@ -12,10 +12,12 @@ import { SupplierKhata } from './components/suppliers/SupplierKhata';
 import { KarigarRegister } from './components/karigar/KarigarRegister';
 import { StockManager } from './components/inventory/StockManager';
 import { QuotationManager } from './components/pos/QuotationManager';
+import { SalesInvoiceHistory } from './components/invoices/SalesInvoiceHistory';
 import { VoidModal } from './components/modals/VoidModal';
 import { PrintInvoiceModal } from './components/modals/PrintInvoiceModal';
 import { PinLockScreen } from './components/security/PinLockScreen';
 import { LoginScreen } from './components/security/LoginScreen';
+import { supabaseSyncService } from './services/supabaseSyncService';
 import { Loader2, CheckCircle, AlertCircle, Info, X } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -33,6 +35,7 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     init();
+    supabaseSyncService.initAutoSync();
   }, [init]);
 
   // Global F-key tab navigation shortcuts
@@ -56,6 +59,9 @@ export const App: React.FC = () => {
       } else if (e.key === 'F5') {
         e.preventDefault();
         setActiveTab('closing');
+      } else if (e.key === 'F6') {
+        e.preventDefault();
+        setActiveTab('invoices');
       } else if (e.altKey && (e.key === 'l' || e.key === 'L')) {
         e.preventDefault();
         lockApp();
@@ -104,6 +110,7 @@ export const App: React.FC = () => {
 
       <main className={`flex-1 overflow-hidden relative ${printInvoiceData ? 'print:hidden' : ''}`}>
         {activeTab === 'pos' && <PosBilling />}
+        {activeTab === 'invoices' && <SalesInvoiceHistory />}
         {activeTab === 'quotations' && <QuotationManager />}
         {activeTab === 'cnc' && <CncRegister />}
         {activeTab === 'khata' && <CustomerKhata />}
